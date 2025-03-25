@@ -20,7 +20,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
 
       // Create main gain node with higher base volume
       const mainGain = audioContext.createGain()
-      mainGain.gain.value = 0.8 // Increased from 0.5
+      mainGain.gain.value = 1.5 // Increased significantly
       mainGain.connect(audioContext.destination)
       mainGainRef.current = mainGain
 
@@ -30,7 +30,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       rumbleOsc.frequency.value = 20
 
       const rumbleGain = audioContext.createGain()
-      rumbleGain.gain.value = 0.5 // Increased from 0.3
+      rumbleGain.gain.value = 0.8 // Increased from 0.5
       rumbleOsc.connect(rumbleGain)
       rumbleGain.connect(mainGain)
 
@@ -40,7 +40,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       atmosphereOsc.frequency.value = 40
       
       const atmosphereGain = audioContext.createGain()
-      atmosphereGain.gain.value = 0.2 // Increased from 0.1
+      atmosphereGain.gain.value = 0.4 // Increased from 0.2
       atmosphereOsc.connect(atmosphereGain)
       atmosphereGain.connect(mainGain)
 
@@ -48,14 +48,19 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       rumbleOsc.start()
       atmosphereOsc.start()
 
-      // Add click handler to the document to start audio context
-      const startAudio = () => {
-        if (audioContext.state === 'suspended') {
+      // Handle tab visibility
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          audioContext.suspend()
+        } else {
           audioContext.resume()
         }
-        document.removeEventListener('click', startAudio)
+      })
+
+      // Initial start of audio context
+      if (document.visibilityState === 'visible') {
+        audioContext.resume()
       }
-      document.addEventListener('click', startAudio)
 
     } catch (error) {
       console.error('Audio initialization error:', error)
@@ -230,46 +235,16 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   }, [size])
 
   return (
-    <>
-      <canvas 
-        ref={canvasRef}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'black',
-        }}
-      />
-      <div 
-        style={{
-          position: 'fixed',
-          bottom: '20px',
-          right: '20px',
-          background: 'rgba(0, 0, 0, 0.5)',
-          padding: '10px',
-          borderRadius: '5px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          color: 'white',
-        }}
-      >
-        <label htmlFor="volume">Volume:</label>
-        <input
-          id="volume"
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          defaultValue="0.8"
-          onChange={handleVolumeChange}
-          style={{
-            width: '100px',
-          }}
-        />
-      </div>
-    </>
+    <canvas 
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: 'black',
+      }}
+    />
   )
 } 
