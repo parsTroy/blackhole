@@ -39,20 +39,21 @@ export function BlackHole({ position, size }: BlackHoleProps) {
       thickness: { value: size * 0.08 },
     },
     vertexShader: `
-      varying vec2 vUv;
       varying vec3 vPosition;
       
       void main() {
-        vUv = uv;
         vPosition = position;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
+      #ifdef GL_ES
+      precision highp float;
+      #endif
+
       uniform float time;
       uniform float radius;
       uniform float thickness;
-      varying vec2 vUv;
       varying vec3 vPosition;
       
       void main() {
@@ -82,7 +83,7 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         // Calculate opacity with position-based fade
         float opacity = ring * (0.8 + 0.2 * sin(angle * 6.0 + time * 2.0));
         
-        gl_FragColor = vec4(baseColor, opacity);
+        gl_FragColor = vec4(baseColor * opacity, opacity);
       }
     `,
     transparent: true,
