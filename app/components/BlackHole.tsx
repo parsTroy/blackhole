@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 
 interface BlackHoleProps {
@@ -11,45 +11,36 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const mainGainRef = useRef<GainNode | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [audioError, setAudioError] = useState<string | null>(null)
-  const cleanupRef = useRef<(() => void) | null>(null)
 
-  // Function to initialize and play audio
+  // Function to initialize audio
   const initializeAudio = async () => {
     try {
-      // Cleanup previous audio context if it exists
-      if (audioContextRef.current) {
-        await audioContextRef.current.close()
-      }
-
-      // Create new audio context
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       audioContextRef.current = audioContext
 
-      // Create main gain node
+      // Create main gain node with higher base volume
       const mainGain = audioContext.createGain()
-      mainGain.gain.value = 0.5
+      mainGain.gain.value = 0.8 // Increased from 0.5
       mainGain.connect(audioContext.destination)
       mainGainRef.current = mainGain
 
-      // Create deep rumble oscillator
+      // Create deep rumble oscillator with higher volume
       const rumbleOsc = audioContext.createOscillator()
       rumbleOsc.type = 'sine'
-      rumbleOsc.frequency.value = 20 // Very low frequency for rumble
+      rumbleOsc.frequency.value = 20
 
       const rumbleGain = audioContext.createGain()
-      rumbleGain.gain.value = 0.3
+      rumbleGain.gain.value = 0.5 // Increased from 0.3
       rumbleOsc.connect(rumbleGain)
       rumbleGain.connect(mainGain)
 
       // Create higher frequency oscillator for atmosphere
       const atmosphereOsc = audioContext.createOscillator()
       atmosphereOsc.type = 'sine'
-      atmosphereOsc.frequency.value = 40 // Slightly higher frequency
+      atmosphereOsc.frequency.value = 40
       
       const atmosphereGain = audioContext.createGain()
-      atmosphereGain.gain.value = 0.1
+      atmosphereGain.gain.value = 0.2 // Increased from 0.1
       atmosphereOsc.connect(atmosphereGain)
       atmosphereGain.connect(mainGain)
 
@@ -57,37 +48,28 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       rumbleOsc.start()
       atmosphereOsc.start()
 
-      setIsPlaying(true)
-      setAudioError(null)
-
-      // Store cleanup function
-      cleanupRef.current = () => {
-        rumbleOsc.stop()
-        atmosphereOsc.stop()
-        rumbleOsc.disconnect()
-        atmosphereOsc.disconnect()
-        rumbleGain.disconnect()
-        atmosphereGain.disconnect()
-        mainGain.disconnect()
+      // Add click handler to the document to start audio context
+      const startAudio = () => {
+        if (audioContext.state === 'suspended') {
+          audioContext.resume()
+        }
+        document.removeEventListener('click', startAudio)
       }
+      document.addEventListener('click', startAudio)
+
     } catch (error) {
       console.error('Audio initialization error:', error)
-      setAudioError('Failed to initialize audio')
     }
   }
 
-  // Cleanup function
-  const cleanup = () => {
-    if (cleanupRef.current) {
-      cleanupRef.current()
+  useEffect(() => {
+    initializeAudio()
+    return () => {
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
     }
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-      audioContextRef.current = null
-    }
-    mainGainRef.current = null
-    setIsPlaying(false)
-  }
+  }, [])
 
   // Handle volume change
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,10 +78,6 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       mainGainRef.current.gain.value = value
     }
   }
-
-  useEffect(() => {
-    return () => cleanup()
-  }, [])
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -278,39 +256,19 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
           color: 'white',
         }}
       >
-        <button
-          onClick={isPlaying ? cleanup : initializeAudio}
+        <label htmlFor="volume">Volume:</label>
+        <input
+          id="volume"
+          type="range"
+          min="0"
+          max="1"
+          step="0.1"
+          defaultValue="0.8"
+          onChange={handleVolumeChange}
           style={{
-            background: isPlaying ? '#ff4400' : '#4444ff',
-            color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '4px',
-            cursor: 'pointer',
+            width: '100px',
           }}
-        >
-          {isPlaying ? 'Stop Sound' : 'Start Sound'}
-        </button>
-        {isPlaying && (
-          <>
-            <label htmlFor="volume">Volume:</label>
-            <input
-              id="volume"
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              defaultValue="0.5"
-              onChange={handleVolumeChange}
-              style={{
-                width: '100px',
-              }}
-            />
-          </>
-        )}
-        {audioError && (
-          <span style={{ color: '#ff4444' }}>{audioError}</span>
-        )}
+        />
       </div>
     </>
   )
