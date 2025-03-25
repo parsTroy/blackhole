@@ -30,7 +30,7 @@ export function Scene() {
       >
         <Suspense fallback={null}>
           {/* Scene background */}
-          <color attach="background" args={['#000000']} />
+          <color attach="background" args={[0, 0, 0]} />
           
           {/* Minimal ambient light */}
           <ambientLight intensity={0.02} />
