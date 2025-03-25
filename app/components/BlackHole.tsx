@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 interface BlackHoleProps {
@@ -11,58 +11,73 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const gainNodeRef = useRef<GainNode | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audioError, setAudioError] = useState<string | null>(null)
+  const cleanupRef = useRef<(() => void) | null>(null)
+
+  // Function to initialize and play audio
+  const initializeAudio = async () => {
+    try {
+      if (audioContextRef.current?.state === 'running') return
+
+      // Create or resume AudioContext
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      }
+      await audioContextRef.current.resume()
+
+      // Create gain node if it doesn't exist
+      if (!gainNodeRef.current) {
+        const gainNode = audioContextRef.current.createGain()
+        gainNode.gain.value = 0.5
+        gainNode.connect(audioContextRef.current.destination)
+        gainNodeRef.current = gainNode
+      }
+
+      // Create and start oscillator for the deep rumble
+      const oscillator = audioContextRef.current.createOscillator()
+      oscillator.type = 'sine'
+      oscillator.frequency.value = 20
+      
+      const oscillatorGain = audioContextRef.current.createGain()
+      oscillatorGain.gain.value = 0.2
+      
+      oscillator.connect(oscillatorGain)
+      oscillatorGain.connect(gainNodeRef.current)
+      oscillator.start()
+
+      setIsPlaying(true)
+      setAudioError(null)
+
+      // Store cleanup function
+      cleanupRef.current = () => {
+        oscillator.stop()
+        oscillator.disconnect()
+        oscillatorGain.disconnect()
+      }
+    } catch (error) {
+      console.error('Audio initialization error:', error)
+      setAudioError('Failed to initialize audio')
+    }
+  }
+
+  // Cleanup function
+  const cleanup = () => {
+    if (cleanupRef.current) {
+      cleanupRef.current()
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
+      audioContextRef.current = null
+    }
+    setIsPlaying(false)
+  }
 
   useEffect(() => {
-    // Audio setup
-    const setupAudio = async () => {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
-      audioContextRef.current = audioContext
+    return () => cleanup()
+  }, [])
 
-      // Create gain node for volume control
-      const gainNode = audioContext.createGain()
-      gainNode.gain.value = 0.5 // Set initial volume
-      gainNode.connect(audioContext.destination)
-      gainNodeRef.current = gainNode
-
-      try {
-        // Load and setup the black hole sound
-        const response = await fetch('/sounds/black-hole-sound.mp3')
-        const arrayBuffer = await response.arrayBuffer()
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-
-        // Create and configure source
-        const source = audioContext.createBufferSource()
-        source.buffer = audioBuffer
-        source.loop = true
-        source.connect(gainNode)
-        source.start(0)
-
-        // Create oscillator for deep bass rumble
-        const oscillator = audioContext.createOscillator()
-        oscillator.type = 'sine'
-        oscillator.frequency.value = 20 // Very low frequency for rumble
-
-        // Create gain node for oscillator
-        const oscillatorGain = audioContext.createGain()
-        oscillatorGain.gain.value = 0.2
-
-        // Connect oscillator
-        oscillator.connect(oscillatorGain)
-        oscillatorGain.connect(gainNode)
-        oscillator.start()
-
-        return () => {
-          source.stop()
-          oscillator.stop()
-          audioContext.close()
-        }
-      } catch (error) {
-        console.error('Error loading audio:', error)
-      }
-    }
-
-    setupAudio()
-
+  useEffect(() => {
     if (!canvasRef.current) return
 
     // Setup
@@ -239,23 +254,43 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
           color: 'white',
         }}
       >
-        <label htmlFor="volume">Volume:</label>
-        <input
-          id="volume"
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          defaultValue="0.5"
-          onChange={(e) => {
-            if (gainNodeRef.current) {
-              gainNodeRef.current.gain.value = parseFloat(e.target.value)
-            }
-          }}
+        <button
+          onClick={isPlaying ? cleanup : initializeAudio}
           style={{
-            width: '100px',
+            background: isPlaying ? '#ff4400' : '#4444ff',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            cursor: 'pointer',
           }}
-        />
+        >
+          {isPlaying ? 'Stop Sound' : 'Start Sound'}
+        </button>
+        {isPlaying && (
+          <>
+            <label htmlFor="volume">Volume:</label>
+            <input
+              id="volume"
+              type="range"
+              min="0"
+              max="1"
+              step="0.1"
+              defaultValue="0.5"
+              onChange={(e) => {
+                if (gainNodeRef.current) {
+                  gainNodeRef.current.gain.value = parseFloat(e.target.value)
+                }
+              }}
+              style={{
+                width: '100px',
+              }}
+            />
+          </>
+        )}
+        {audioError && (
+          <span style={{ color: '#ff4444' }}>{audioError}</span>
+        )}
       </div>
     </>
   )
