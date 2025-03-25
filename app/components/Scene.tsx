@@ -57,7 +57,7 @@ export function Scene() {
               height={300}
             />
             <ChromaticAberration
-              offset={[0.0005, 0.0005]} // Subtle chromatic aberration
+              offset={new THREE.Vector2(0.0005, 0.0005)} // Subtle chromatic aberration
             />
           </EffectComposer>
           
