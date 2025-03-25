@@ -1,21 +1,9 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Stars, PerspectiveCamera } from '@react-three/drei'
-import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing'
+import { OrbitControls, Sphere } from '@react-three/drei'
 import * as THREE from 'three'
-import { BlackHole } from './BlackHole'
-import { AmbientAudio } from './AmbientAudio'
-import { Suspense, useState, useEffect, useMemo } from 'react'
-import { Debug } from './Debug'
-
-function ErrorBoundaryFallback() {
-  return (
-    <div className="text-white p-4">
-      Error loading 3D content. Please check console for details.
-    </div>
-  )
-}
+import { Suspense } from 'react'
 
 function LoadingFallback() {
   return (
@@ -25,101 +13,34 @@ function LoadingFallback() {
   )
 }
 
+// Simple sphere component to test 3D rendering
+function TestSphere() {
+  return (
+    <Sphere args={[1, 32, 32]}>
+      <meshStandardMaterial color="#ff0000" />
+    </Sphere>
+  )
+}
+
 export function Scene() {
-  const [mounted, setMounted] = useState(false)
-
-  // Create a memoized Vector2 for chromatic aberration
-  const chromaticAberrationOffset = useMemo(() => new THREE.Vector2(0.0005, 0.0005), [])
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return <LoadingFallback />
-  }
-
   return (
     <div className="fixed inset-0 w-full h-full bg-black">
-      <Debug />
-      <AmbientAudio />
       <Canvas
-        shadows
-        dpr={[1, 2]}
-        gl={{
-          antialias: true,
-          alpha: false,
-          stencil: false,
-          depth: true,
-          powerPreference: "high-performance",
-        }}
-        style={{ 
-          position: 'absolute', 
-          width: '100%', 
-          height: '100%',
-          background: 'black',
-          touchAction: 'none'
+        camera={{
+          position: [0, 0, 5],
+          fov: 75
         }}
       >
         <Suspense fallback={<LoadingFallback />}>
-          {/* Camera setup */}
-          <PerspectiveCamera
-            makeDefault
-            position={[0, 5, 15]}
-            fov={60}
-            near={0.1}
-            far={1000}
-          />
-
-          {/* Scene background */}
-          <color attach="background" args={[0, 0, 0]} />
+          {/* Basic lighting */}
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
           
-          {/* Base lighting */}
-          <ambientLight intensity={0.1} />
-          <pointLight position={[10, 10, 10]} intensity={0.5} />
-          
-          {/* Enhanced star field */}
-          <Stars
-            radius={100}
-            depth={50}
-            count={5000}
-            factor={4}
-            saturation={0}
-            fade
-            speed={0.5}
-          />
-          
-          {/* Black hole */}
-          <BlackHole position={[0, 0, 0]} size={5} />
-          
-          {/* Post-processing effects */}
-          <EffectComposer>
-            <Bloom
-              intensity={1.5}
-              luminanceThreshold={0.1}
-              luminanceSmoothing={0.9}
-              height={300}
-            />
-            <ChromaticAberration
-              offset={chromaticAberrationOffset}
-              radialModulation={false}
-              modulationOffset={1.0}
-            />
-          </EffectComposer>
+          {/* Test sphere */}
+          <TestSphere />
           
           {/* Camera controls */}
-          <OrbitControls
-            enableZoom={true}
-            enablePan={true}
-            enableRotate={true}
-            zoomSpeed={0.5}
-            panSpeed={0.5}
-            rotateSpeed={0.5}
-            minDistance={10}
-            maxDistance={50}
-            minPolarAngle={Math.PI / 4}
-            maxPolarAngle={Math.PI * 3/4}
-          />
+          <OrbitControls />
         </Suspense>
       </Canvas>
     </div>
