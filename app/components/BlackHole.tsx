@@ -38,6 +38,8 @@ export function BlackHole({ position, size }: BlackHoleProps) {
       time: { value: 0 },
       radius: { value: size * 2.05 },
       thickness: { value: size * 0.08 },
+      color1: { value: new THREE.Color(1.0, 0.6, 0.2) },  // redshift color
+      color2: { value: new THREE.Color(0.7, 0.85, 1.0) }, // blueshift color
     },
     vertexShader: `
       varying vec3 vPosition;
@@ -48,13 +50,13 @@ export function BlackHole({ position, size }: BlackHoleProps) {
       }
     `,
     fragmentShader: `
-      #ifdef GL_ES
       precision highp float;
-      #endif
 
       uniform float time;
       uniform float radius;
       uniform float thickness;
+      uniform vec3 color1;
+      uniform vec3 color2;
       varying vec3 vPosition;
       
       void main() {
@@ -68,14 +70,12 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         float ring = smoothstep(radius - thickness, radius, dist) * 
                     (1.0 - smoothstep(radius, radius + thickness, dist));
         
-        // Doppler and gravitational effects
-        float blueshift = pow(sin(angle * 0.5 + time * 0.2), 2.0);
-        float redshift = pow(cos(angle * 0.5 + time * 0.2), 2.0);
+        // Create time-based color shift
+        float shift = sin(angle * 0.5 + time * 0.2);
+        float colorMix = pow(shift * 0.5 + 0.5, 2.0);
         
-        // Create base colors with proper shifting
-        vec3 blueshiftColor = vec3(0.7, 0.85, 1.0);
-        vec3 redshiftColor = vec3(1.0, 0.6, 0.2);
-        vec3 baseColor = mix(redshiftColor, blueshiftColor, blueshift);
+        // Mix colors based on shift
+        vec3 baseColor = mix(color1, color2, colorMix);
         
         // Add brightness variation
         float brightness = 1.5 + 0.5 * sin(angle * 2.0 + time);
@@ -84,12 +84,14 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         // Calculate opacity with position-based fade
         float opacity = ring * (0.8 + 0.2 * sin(angle * 6.0 + time * 2.0));
         
+        // Output final color
         gl_FragColor = vec4(baseColor * opacity, opacity);
       }
     `,
     transparent: true,
     side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
+    depthWrite: false, // Add this to fix transparency sorting issues
   })
 
   // Create material for the gravitational lensing arcs
