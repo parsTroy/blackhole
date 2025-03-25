@@ -18,6 +18,7 @@ export function BlackHole({ position, size }: BlackHoleProps) {
   const topArcRef = useRef<THREE.Mesh>(null)
   const bottomArcRef = useRef<THREE.Mesh>(null)
   const einsteinRingRef = useRef<THREE.Mesh>(null)
+  const outerGlowRef = useRef<THREE.Mesh>(null)
 
   // Create extremely bright emissive materials for the accretion disk
   const diskMaterial = new THREE.MeshStandardMaterial({
@@ -132,19 +133,15 @@ export function BlackHole({ position, size }: BlackHoleProps) {
     try {
       const time = state.clock.getElapsedTime()
       
-      if (mainDiskRef.current && topArcRef.current && bottomArcRef.current && einsteinRingRef.current) {
-        // Very slow rotation for realism
-        mainDiskRef.current.rotation.z += 0.0003
-        topArcRef.current.rotation.z += 0.0003
-        bottomArcRef.current.rotation.z += 0.0003
-        
-        // Update Einstein ring shader time
-        einsteinRingMaterial.uniforms.time.value = time
-      }
-
-      if (einsteinRingRef.current) {
-        einsteinRingRef.current.rotation.z += 0.0002
-      }
+      // Update rotations
+      const rotationSpeed = 0.0003
+      mainDiskRef.current?.rotation.set(0, 0, mainDiskRef.current.rotation.z + rotationSpeed)
+      topArcRef.current?.rotation.set(0, 0, topArcRef.current.rotation.z + rotationSpeed)
+      bottomArcRef.current?.rotation.set(0, 0, bottomArcRef.current.rotation.z + rotationSpeed)
+      einsteinRingRef.current?.rotation.set(0, 0, einsteinRingRef.current.rotation.z + 0.0002)
+      
+      // Update shader uniforms
+      einsteinRingMaterial.uniforms.time.value = time
     } catch (error) {
       console.error('Error in animation frame:', error)
     }
@@ -153,7 +150,7 @@ export function BlackHole({ position, size }: BlackHoleProps) {
   return (
     <group position={position}>
       {/* Event horizon (black sphere) */}
-      <mesh scale={[size * 0.5, size * 0.5, size * 0.5]}>
+      <mesh ref={blackHoleRef} scale={[size * 0.5, size * 0.5, size * 0.5]}>
         <sphereGeometry args={[1, 64, 64]} />
         <primitive object={blackHoleMaterial} attach="material" />
       </mesh>
@@ -161,13 +158,13 @@ export function BlackHole({ position, size }: BlackHoleProps) {
       {/* Einstein ring (complete gravitational lensing effect) */}
       <mesh ref={einsteinRingRef}>
         <ringGeometry args={[size * 2.0, size * 2.2, 360]} />
-        <primitive object={einsteinRingMaterial} />
+        <primitive object={einsteinRingMaterial} attach="material" />
       </mesh>
 
       {/* Main accretion disk - horizontal orientation */}
       <mesh ref={mainDiskRef}>
         <ringGeometry args={[size * 1.1, size * 2.15, 360]} />
-        <primitive object={diskMaterial} />
+        <primitive object={diskMaterial} attach="material" />
       </mesh>
 
       {/* Top gravitational lensing arc */}
@@ -176,7 +173,7 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         rotation={[0, 0, 0]}
       >
         <ringGeometry args={[size * 0.6, size * 0.72, 200]} />
-        <primitive object={arcMaterial} />
+        <primitive object={arcMaterial} attach="material" />
       </mesh>
 
       {/* Bottom gravitational lensing arc */}
@@ -185,13 +182,13 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         rotation={[0, 0, 0]}
       >
         <ringGeometry args={[size * 0.6, size * 0.72, 200]} />
-        <primitive object={arcMaterial} />
+        <primitive object={arcMaterial} attach="material" />
       </mesh>
 
       {/* Outer glow */}
-      <mesh ref={einsteinRingRef}>
+      <mesh ref={outerGlowRef}>
         <ringGeometry args={[size * 2.2, size * 3.5, 180]} />
-        <primitive object={glowMaterial} />
+        <primitive object={glowMaterial} attach="material" />
       </mesh>
 
       {/* Enhanced lighting setup */}
