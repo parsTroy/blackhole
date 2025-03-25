@@ -1,7 +1,7 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Stars } from '@react-three/drei'
+import { OrbitControls, Stars, PerspectiveCamera } from '@react-three/drei'
 import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { BlackHole } from './BlackHole'
@@ -19,7 +19,7 @@ function ErrorBoundaryFallback() {
 
 function LoadingFallback() {
   return (
-    <div className="text-white p-4">
+    <div className="text-white p-4 absolute inset-0 flex items-center justify-center bg-black">
       Loading 3D scene...
     </div>
   )
@@ -41,36 +41,39 @@ export function Scene() {
       <Debug />
       <AmbientAudio />
       <Canvas
+        shadows
+        dpr={[1, 2]}
+        gl={{
+          antialias: true,
+          alpha: false,
+          stencil: false,
+          depth: true,
+          powerPreference: "high-performance",
+        }}
         style={{ 
           position: 'absolute', 
           width: '100%', 
           height: '100%',
-          background: 'black' 
+          background: 'black',
+          touchAction: 'none'
         }}
-        camera={{
-          position: [15, 8, 15],
-          fov: 60,
-          near: 0.1,
-          far: 1000,
-        }}
-        gl={{
-          antialias: true,
-          toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 0.8,
-          powerPreference: "high-performance",
-        }}
-        dpr={[1, 2]} // Responsive pixel ratio
       >
         <Suspense fallback={<LoadingFallback />}>
+          {/* Camera setup */}
+          <PerspectiveCamera
+            makeDefault
+            position={[0, 5, 15]}
+            fov={60}
+            near={0.1}
+            far={1000}
+          />
+
           {/* Scene background */}
           <color attach="background" args={[0, 0, 0]} />
           
-          {/* Minimal ambient light */}
-          <ambientLight intensity={0.02} />
-          
-          {/* Distant star light */}
-          <pointLight position={[50, 30, 50]} intensity={0.3} />
-          <pointLight position={[-50, -30, -50]} intensity={0.2} />
+          {/* Base lighting */}
+          <ambientLight intensity={0.1} />
+          <pointLight position={[10, 10, 10]} intensity={0.5} />
           
           {/* Enhanced star field */}
           <Stars
@@ -86,18 +89,16 @@ export function Scene() {
           {/* Black hole */}
           <BlackHole position={[0, 0, 0]} size={5} />
           
-          {/* Enhanced post-processing */}
+          {/* Post-processing effects */}
           <EffectComposer>
             <Bloom
-              intensity={2.0}
-              luminanceThreshold={0.2}
+              intensity={1.5}
+              luminanceThreshold={0.1}
               luminanceSmoothing={0.9}
               height={300}
             />
             <ChromaticAberration
-              offset={new THREE.Vector2(0.0005, 0.0005)}
-              radialModulation={false}
-              modulationOffset={1.0}
+              offset={[0.0005, 0.0005]}
             />
           </EffectComposer>
           
@@ -109,9 +110,9 @@ export function Scene() {
             zoomSpeed={0.5}
             panSpeed={0.5}
             rotateSpeed={0.5}
-            minDistance={12}
-            maxDistance={100}
-            minPolarAngle={Math.PI / 4} // Limit vertical rotation
+            minDistance={10}
+            maxDistance={50}
+            minPolarAngle={Math.PI / 4}
             maxPolarAngle={Math.PI * 3/4}
           />
         </Suspense>

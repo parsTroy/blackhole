@@ -24,12 +24,13 @@ export function BlackHole({ position, size }: BlackHoleProps) {
   const diskMaterial = useMemo(() => new THREE.MeshStandardMaterial({
     color: new THREE.Color('#ffaa00'),
     emissive: new THREE.Color('#ff5500'),
-    emissiveIntensity: 2,
+    emissiveIntensity: 5,
     metalness: 0.8,
     roughness: 0.2,
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 0.9,
+    depthWrite: false,
   }), [])
 
   const einsteinRingMaterial = useMemo(() => new THREE.MeshStandardMaterial({
@@ -46,22 +47,22 @@ export function BlackHole({ position, size }: BlackHoleProps) {
   const arcMaterial = useMemo(() => new THREE.MeshStandardMaterial({
     color: new THREE.Color('#ffaa00'),
     emissive: new THREE.Color('#ff5500'),
-    emissiveIntensity: 2,
+    emissiveIntensity: 4,
     metalness: 0.8,
     roughness: 0.2,
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 0.7,
+    depthWrite: false,
   }), [])
 
-  const glowMaterial = useMemo(() => new THREE.MeshStandardMaterial({
+  const glowMaterial = useMemo(() => new THREE.MeshBasicMaterial({
     color: new THREE.Color('#ff5500'),
-    emissive: new THREE.Color('#ff3300'),
-    emissiveIntensity: 2,
     transparent: true,
     opacity: 0.4,
     side: THREE.DoubleSide,
     blending: THREE.AdditiveBlending,
+    depthWrite: false,
   }), [])
 
   useFrame((state, delta) => {
@@ -89,18 +90,19 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         <MeshDistortMaterial
           color="#4488ff"
           emissive="#0044ff"
-          emissiveIntensity={3}
+          emissiveIntensity={5}
           metalness={1}
           roughness={0}
           distort={0.3}
           speed={2}
           transparent
           opacity={0.7}
+          depthWrite={false}
         />
       </Ring>
 
       {/* Main accretion disk */}
-      <Ring ref={mainDiskRef} args={[size * 1.1, size * 2.15, 360]}>
+      <Ring ref={mainDiskRef} args={[size * 1.1, size * 2.15, 360]} rotation={[Math.PI / 6, 0, 0]}>
         <primitive object={diskMaterial} attach="material" />
       </Ring>
 
@@ -108,7 +110,7 @@ export function BlackHole({ position, size }: BlackHoleProps) {
       <Ring
         ref={topArcRef}
         args={[size * 0.6, size * 0.72, 200]}
-        rotation={[0, 0, 0]}
+        rotation={[Math.PI / 4, 0, 0]}
       >
         <primitive object={arcMaterial} attach="material" />
       </Ring>
@@ -117,7 +119,7 @@ export function BlackHole({ position, size }: BlackHoleProps) {
       <Ring
         ref={bottomArcRef}
         args={[size * 0.6, size * 0.72, 200]}
-        rotation={[0, 0, 0]}
+        rotation={[-Math.PI / 4, 0, 0]}
       >
         <primitive object={arcMaterial} attach="material" />
       </Ring>
@@ -127,15 +129,11 @@ export function BlackHole({ position, size }: BlackHoleProps) {
         <primitive object={glowMaterial} attach="material" />
       </Ring>
 
-      {/* Enhanced lighting setup */}
-      <ambientLight intensity={0.15} />
-      <pointLight position={[10, 10, 10]} intensity={3} color="#ffaa00" />
-      <pointLight position={[-10, -10, -10]} intensity={2} color="#ff4400" />
-      <pointLight position={[0, 0, 10]} intensity={3} color="#ffffff" />
-      
-      {/* Additional rim lighting */}
-      <pointLight position={[size * 2, 0, 0]} intensity={2} color="#ff8800" />
-      <pointLight position={[-size * 2, 0, 0]} intensity={2} color="#ff8800" />
+      {/* Local lighting for the black hole */}
+      <pointLight position={[0, 2, 0]} intensity={2} color="#ffaa00" />
+      <pointLight position={[0, -2, 0]} intensity={2} color="#ff4400" />
+      <pointLight position={[2, 0, 0]} intensity={2} color="#ff8800" />
+      <pointLight position={[-2, 0, 0]} intensity={2} color="#ff8800" />
     </group>
   )
 } 
