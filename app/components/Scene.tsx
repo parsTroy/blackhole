@@ -6,7 +6,7 @@ import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postpro
 import * as THREE from 'three'
 import { BlackHole } from './BlackHole'
 import { AmbientAudio } from './AmbientAudio'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useMemo } from 'react'
 import { Debug } from './Debug'
 
 function ErrorBoundaryFallback() {
@@ -27,6 +27,9 @@ function LoadingFallback() {
 
 export function Scene() {
   const [mounted, setMounted] = useState(false)
+
+  // Create a memoized Vector2 for chromatic aberration
+  const chromaticAberrationOffset = useMemo(() => new THREE.Vector2(0.0005, 0.0005), [])
 
   useEffect(() => {
     setMounted(true)
@@ -98,7 +101,7 @@ export function Scene() {
               height={300}
             />
             <ChromaticAberration
-              offset={[0.0005, 0.0005]}
+              offset={chromaticAberrationOffset}
             />
           </EffectComposer>
           
