@@ -6,14 +6,47 @@ import { EffectComposer, Bloom, ChromaticAberration } from '@react-three/postpro
 import * as THREE from 'three'
 import { BlackHole } from './BlackHole'
 import { AmbientAudio } from './AmbientAudio'
-import { Suspense } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { Debug } from './Debug'
+
+function ErrorBoundaryFallback() {
+  return (
+    <div className="text-white p-4">
+      Error loading 3D content. Please check console for details.
+    </div>
+  )
+}
+
+function LoadingFallback() {
+  return (
+    <div className="text-white p-4">
+      Loading 3D scene...
+    </div>
+  )
+}
 
 export function Scene() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) {
+    return <LoadingFallback />
+  }
+
   return (
     <div className="fixed inset-0 w-full h-full bg-black">
+      <Debug />
       <AmbientAudio />
       <Canvas
-        style={{ position: 'absolute', width: '100%', height: '100%' }}
+        style={{ 
+          position: 'absolute', 
+          width: '100%', 
+          height: '100%',
+          background: 'black' 
+        }}
         camera={{
           position: [15, 8, 15],
           fov: 60,
@@ -28,7 +61,7 @@ export function Scene() {
         }}
         dpr={[1, 2]} // Responsive pixel ratio
       >
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingFallback />}>
           {/* Scene background */}
           <color attach="background" args={[0, 0, 0]} />
           
@@ -51,7 +84,7 @@ export function Scene() {
           />
           
           {/* Black hole */}
-          <BlackHole />
+          <BlackHole position={[0, 0, 0]} size={5} />
           
           {/* Enhanced post-processing */}
           <EffectComposer>
