@@ -1,3 +1,5 @@
+'use client'
+
 import { Scene } from './components/Scene'
 import { useEffect, useState } from 'react'
 
