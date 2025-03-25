@@ -119,7 +119,6 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   useEffect(() => {
     if (!canvasRef.current) return
 
-    // Setup
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000)
     const renderer = new THREE.WebGLRenderer({
@@ -131,7 +130,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
     renderer.setSize(window.innerWidth, window.innerHeight)
     renderer.setClearColor(0x000000)
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.8
+    renderer.toneMappingExposure = 1.2 // Increased exposure for brighter highlights
 
     // Create stars
     const starGeometry = new THREE.BufferGeometry()
@@ -162,13 +161,15 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
     const blackHole = new THREE.Mesh(blackHoleGeometry, blackHoleMaterial)
     scene.add(blackHole)
 
-    // Create accretion disk with gradient
+    // Create accretion disk with improved colors
     const diskGeometry = new THREE.RingGeometry(size * 0.6, size * 1.8, 180)
     const diskMaterial = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
-        innerColor: { value: new THREE.Color(0x4444ff) },  // Blue-shifted
-        outerColor: { value: new THREE.Color(0xff4400) },  // Red-shifted
+        innerColor: { value: new THREE.Color(0xffffff) },  // Bright white center
+        midColor: { value: new THREE.Color(0xff7700) },    // Intense orange
+        outerColor: { value: new THREE.Color(0x1a1a6c) },  // Deep blue
+        glowColor: { value: new THREE.Color(0xff5500) },   // Orange glow
       },
       vertexShader: `
         varying vec2 vUv;
@@ -180,13 +181,35 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       fragmentShader: `
         uniform float time;
         uniform vec3 innerColor;
+        uniform vec3 midColor;
         uniform vec3 outerColor;
+        uniform vec3 glowColor;
         varying vec2 vUv;
+        
         void main() {
-          float intensity = 1.0 - vUv.y;
-          vec3 color = mix(innerColor, outerColor, vUv.x);
-          float glow = 0.5 + 0.5 * sin(time * 2.0 + vUv.x * 10.0);
-          gl_FragColor = vec4(color * intensity * glow, 1.0);
+          float mid = 0.5;
+          float intensity = 1.0 - abs(vUv.y - 0.5) * 2.0;
+          
+          // Create a more complex color gradient
+          vec3 color;
+          if (vUv.x < 0.3) {
+            color = mix(innerColor, midColor, vUv.x / 0.3);
+          } else if (vUv.x < 0.7) {
+            color = mix(midColor, outerColor, (vUv.x - 0.3) / 0.4);
+          } else {
+            color = outerColor;
+          }
+          
+          // Add time-based brightness variation
+          float brightness = 1.0 + 0.3 * sin(time * 2.0 + vUv.x * 10.0);
+          
+          // Add glow effect
+          float glow = 0.8 + 0.2 * sin(time * 3.0 + vUv.x * 15.0);
+          vec3 glowEffect = glowColor * glow * (1.0 - vUv.x) * 0.5;
+          
+          // Combine everything
+          vec3 finalColor = (color * brightness + glowEffect) * intensity;
+          gl_FragColor = vec4(finalColor, intensity * 0.9);
         }
       `,
       side: THREE.DoubleSide,
@@ -195,15 +218,15 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
     })
     
     const disk = new THREE.Mesh(diskGeometry, diskMaterial)
-    disk.rotation.x = Math.PI / 3  // More realistic angle
+    disk.rotation.x = Math.PI / 3  // Angle matches more closely to Interstellar
     scene.add(disk)
 
     // Add glow effect
-    const glowGeometry = new THREE.RingGeometry(size * 0.55, size * 2.0, 180)
+    const glowGeometry = new THREE.RingGeometry(size * 0.55, size * 2.2, 180)
     const glowMaterial = new THREE.MeshBasicMaterial({
-      color: 0xff6600,
+      color: 0xff3300,
       transparent: true,
-      opacity: 0.1,
+      opacity: 0.15,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
     })
@@ -212,11 +235,11 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
     scene.add(glow)
 
     // Add lighting
-    const light1 = new THREE.PointLight(0xff8800, 2)
+    const light1 = new THREE.PointLight(0xff7700, 2)
     light1.position.set(0, 2, 0)
     scene.add(light1)
     
-    const light2 = new THREE.PointLight(0x4444ff, 1)
+    const light2 = new THREE.PointLight(0x0066ff, 1)
     light2.position.set(0, -2, 0)
     scene.add(light2)
 
@@ -259,7 +282,6 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
     window.addEventListener('resize', handleResize)
     animate()
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize)
       renderer.dispose()
