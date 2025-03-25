@@ -5,18 +5,20 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Supermassive Black Hole Visualization",
-  description: "An interactive 3D visualization of a supermassive black hole",
+  title: "Black Hole Visualization",
+  description: "An interactive 3D visualization of a black hole inspired by Interstellar's Gargantua",
 };
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-black`}>{children}</body>
+      <body className={`${inter.className} overflow-hidden`}>
+        {children}
+      </body>
     </html>
   );
 }

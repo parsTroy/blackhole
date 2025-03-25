@@ -10,9 +10,10 @@ import { Suspense } from 'react'
 
 export function Scene() {
   return (
-    <div className="h-screen w-screen">
+    <div className="fixed inset-0 w-full h-full bg-black">
       <AmbientAudio />
       <Canvas
+        style={{ position: 'absolute', width: '100%', height: '100%' }}
         camera={{
           position: [15, 8, 15],
           fov: 60,
@@ -25,8 +26,12 @@ export function Scene() {
           toneMappingExposure: 0.8,
           powerPreference: "high-performance",
         }}
+        dpr={[1, 2]} // Responsive pixel ratio
       >
         <Suspense fallback={null}>
+          {/* Scene background */}
+          <color attach="background" args={['#000000']} />
+          
           {/* Minimal ambient light */}
           <ambientLight intensity={0.02} />
           
