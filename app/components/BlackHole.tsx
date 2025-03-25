@@ -9,8 +9,60 @@ interface BlackHoleProps {
 
 export function BlackHole({ size = 3 }: BlackHoleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const gainNodeRef = useRef<GainNode | null>(null)
 
   useEffect(() => {
+    // Audio setup
+    const setupAudio = async () => {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioContextRef.current = audioContext
+
+      // Create gain node for volume control
+      const gainNode = audioContext.createGain()
+      gainNode.gain.value = 0.5 // Set initial volume
+      gainNode.connect(audioContext.destination)
+      gainNodeRef.current = gainNode
+
+      try {
+        // Load and setup the black hole sound
+        const response = await fetch('/sounds/black-hole-sound.mp3')
+        const arrayBuffer = await response.arrayBuffer()
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+
+        // Create and configure source
+        const source = audioContext.createBufferSource()
+        source.buffer = audioBuffer
+        source.loop = true
+        source.connect(gainNode)
+        source.start(0)
+
+        // Create oscillator for deep bass rumble
+        const oscillator = audioContext.createOscillator()
+        oscillator.type = 'sine'
+        oscillator.frequency.value = 20 // Very low frequency for rumble
+
+        // Create gain node for oscillator
+        const oscillatorGain = audioContext.createGain()
+        oscillatorGain.gain.value = 0.2
+
+        // Connect oscillator
+        oscillator.connect(oscillatorGain)
+        oscillatorGain.connect(gainNode)
+        oscillator.start()
+
+        return () => {
+          source.stop()
+          oscillator.stop()
+          audioContext.close()
+        }
+      } catch (error) {
+        console.error('Error loading audio:', error)
+      }
+    }
+
+    setupAudio()
+
     if (!canvasRef.current) return
 
     // Setup
@@ -161,16 +213,50 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   }, [size])
 
   return (
-    <canvas 
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'black',
-      }}
-    />
+    <>
+      <canvas 
+        ref={canvasRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'black',
+        }}
+      />
+      <div 
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          background: 'rgba(0, 0, 0, 0.5)',
+          padding: '10px',
+          borderRadius: '5px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          color: 'white',
+        }}
+      >
+        <label htmlFor="volume">Volume:</label>
+        <input
+          id="volume"
+          type="range"
+          min="0"
+          max="1"
+          step="0.1"
+          defaultValue="0.5"
+          onChange={(e) => {
+            if (gainNodeRef.current) {
+              gainNodeRef.current.gain.value = parseFloat(e.target.value)
+            }
+          }}
+          style={{
+            width: '100px',
+          }}
+        />
+      </div>
+    </>
   )
 } 
