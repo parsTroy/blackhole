@@ -27,6 +27,29 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       mainGain.connect(audioContext.destination)
       mainGainRef.current = mainGain
 
+      // Load and play the black hole sound file
+      try {
+        const response = await fetch('/sounds/black-hole-sound.mp3')
+        const arrayBuffer = await response.arrayBuffer()
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+        
+        // Create and configure audio source for the file
+        const audioSource = audioContext.createBufferSource()
+        audioSource.buffer = audioBuffer
+        audioSource.loop = true
+        
+        // Create gain node for the audio file
+        const fileGain = audioContext.createGain()
+        fileGain.gain.value = 0.7 // Adjust this value to balance with other sounds
+        audioSource.connect(fileGain)
+        fileGain.connect(mainGain)
+        
+        // Start the audio file playback
+        audioSource.start(0)
+      } catch (fileError) {
+        console.error('Error loading audio file:', fileError)
+      }
+
       // Create deep rumble oscillator with higher volume
       const rumbleOsc = audioContext.createOscillator()
       rumbleOsc.type = 'sine'
