@@ -1,9 +1,11 @@
 'use client'
 
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Sphere } from '@react-three/drei'
+import { OrbitControls, Stars, PerspectiveCamera, Sphere } from '@react-three/drei'
+import { EffectComposer, Bloom } from '@react-three/postprocessing'
 import * as THREE from 'three'
 import { Suspense } from 'react'
+import { BlackHole } from './BlackHole'
 
 function LoadingFallback() {
   return (
@@ -26,21 +28,57 @@ export function Scene() {
   return (
     <div className="fixed inset-0 w-full h-full bg-black">
       <Canvas
-        camera={{
-          position: [0, 0, 5],
-          fov: 75
+        gl={{
+          antialias: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 0.5,
         }}
       >
         <Suspense fallback={<LoadingFallback />}>
-          {/* Basic lighting */}
-          <ambientLight intensity={0.5} />
-          <pointLight position={[10, 10, 10]} />
+          {/* Camera */}
+          <PerspectiveCamera
+            makeDefault
+            position={[0, 2, 15]}
+            fov={60}
+          />
+
+          {/* Scene lighting */}
+          <ambientLight intensity={0.1} />
+          <pointLight position={[10, 10, 10]} intensity={0.5} />
           
-          {/* Test sphere */}
-          <TestSphere />
+          {/* Star field */}
+          <Stars
+            radius={100}
+            depth={50}
+            count={5000}
+            factor={4}
+            saturation={0}
+            fade
+            speed={0.5}
+          />
           
-          {/* Camera controls */}
-          <OrbitControls />
+          {/* Black hole */}
+          <BlackHole position={[0, 0, 0]} size={3} />
+          
+          {/* Post processing */}
+          <EffectComposer>
+            <Bloom
+              intensity={1.5}
+              luminanceThreshold={0.6}
+              luminanceSmoothing={0.9}
+            />
+          </EffectComposer>
+
+          {/* Controls */}
+          <OrbitControls
+            enableZoom={true}
+            enablePan={true}
+            enableRotate={true}
+            minDistance={8}
+            maxDistance={30}
+            minPolarAngle={Math.PI / 4}
+            maxPolarAngle={Math.PI * 3/4}
+          />
         </Suspense>
       </Canvas>
     </div>
