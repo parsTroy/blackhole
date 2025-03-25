@@ -10,7 +10,7 @@ interface BlackHoleProps {
 export function BlackHole({ size = 3 }: BlackHoleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
-  const gainNodeRef = useRef<GainNode | null>(null)
+  const mainGainRef = useRef<GainNode | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioError, setAudioError] = useState<string | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -18,42 +18,57 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   // Function to initialize and play audio
   const initializeAudio = async () => {
     try {
-      if (audioContextRef.current?.state === 'running') return
-
-      // Create or resume AudioContext
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
-      }
-      await audioContextRef.current.resume()
-
-      // Create gain node if it doesn't exist
-      if (!gainNodeRef.current) {
-        const gainNode = audioContextRef.current.createGain()
-        gainNode.gain.value = 0.5
-        gainNode.connect(audioContextRef.current.destination)
-        gainNodeRef.current = gainNode
+      // Cleanup previous audio context if it exists
+      if (audioContextRef.current) {
+        await audioContextRef.current.close()
       }
 
-      // Create and start oscillator for the deep rumble
-      const oscillator = audioContextRef.current.createOscillator()
-      oscillator.type = 'sine'
-      oscillator.frequency.value = 20
+      // Create new audio context
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioContextRef.current = audioContext
+
+      // Create main gain node
+      const mainGain = audioContext.createGain()
+      mainGain.gain.value = 0.5
+      mainGain.connect(audioContext.destination)
+      mainGainRef.current = mainGain
+
+      // Create deep rumble oscillator
+      const rumbleOsc = audioContext.createOscillator()
+      rumbleOsc.type = 'sine'
+      rumbleOsc.frequency.value = 20 // Very low frequency for rumble
+
+      const rumbleGain = audioContext.createGain()
+      rumbleGain.gain.value = 0.3
+      rumbleOsc.connect(rumbleGain)
+      rumbleGain.connect(mainGain)
+
+      // Create higher frequency oscillator for atmosphere
+      const atmosphereOsc = audioContext.createOscillator()
+      atmosphereOsc.type = 'sine'
+      atmosphereOsc.frequency.value = 40 // Slightly higher frequency
       
-      const oscillatorGain = audioContextRef.current.createGain()
-      oscillatorGain.gain.value = 0.2
-      
-      oscillator.connect(oscillatorGain)
-      oscillatorGain.connect(gainNodeRef.current)
-      oscillator.start()
+      const atmosphereGain = audioContext.createGain()
+      atmosphereGain.gain.value = 0.1
+      atmosphereOsc.connect(atmosphereGain)
+      atmosphereGain.connect(mainGain)
+
+      // Start oscillators
+      rumbleOsc.start()
+      atmosphereOsc.start()
 
       setIsPlaying(true)
       setAudioError(null)
 
       // Store cleanup function
       cleanupRef.current = () => {
-        oscillator.stop()
-        oscillator.disconnect()
-        oscillatorGain.disconnect()
+        rumbleOsc.stop()
+        atmosphereOsc.stop()
+        rumbleOsc.disconnect()
+        atmosphereOsc.disconnect()
+        rumbleGain.disconnect()
+        atmosphereGain.disconnect()
+        mainGain.disconnect()
       }
     } catch (error) {
       console.error('Audio initialization error:', error)
@@ -70,7 +85,16 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       audioContextRef.current.close()
       audioContextRef.current = null
     }
+    mainGainRef.current = null
     setIsPlaying(false)
+  }
+
+  // Handle volume change
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value)
+    if (mainGainRef.current) {
+      mainGainRef.current.gain.value = value
+    }
   }
 
   useEffect(() => {
@@ -277,11 +301,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
               max="1"
               step="0.1"
               defaultValue="0.5"
-              onChange={(e) => {
-                if (gainNodeRef.current) {
-                  gainNodeRef.current.gain.value = parseFloat(e.target.value)
-                }
-              }}
+              onChange={handleVolumeChange}
               style={{
                 width: '100px',
               }}
