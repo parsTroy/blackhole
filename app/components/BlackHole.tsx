@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
 interface BlackHoleProps {
@@ -11,16 +11,19 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const mainGainRef = useRef<GainNode | null>(null)
+  const [audioInitialized, setAudioInitialized] = useState(false)
 
   // Function to initialize audio
   const initializeAudio = async () => {
+    if (audioInitialized) return
+    
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
       audioContextRef.current = audioContext
 
       // Create main gain node with higher base volume
       const mainGain = audioContext.createGain()
-      mainGain.gain.value = 1.5 // Increased significantly
+      mainGain.gain.value = 1.5
       mainGain.connect(audioContext.destination)
       mainGainRef.current = mainGain
 
@@ -30,7 +33,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       rumbleOsc.frequency.value = 20
 
       const rumbleGain = audioContext.createGain()
-      rumbleGain.gain.value = 0.8 // Increased from 0.5
+      rumbleGain.gain.value = 0.8
       rumbleOsc.connect(rumbleGain)
       rumbleGain.connect(mainGain)
 
@@ -40,36 +43,42 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       atmosphereOsc.frequency.value = 40
       
       const atmosphereGain = audioContext.createGain()
-      atmosphereGain.gain.value = 0.4 // Increased from 0.2
+      atmosphereGain.gain.value = 0.4
       atmosphereOsc.connect(atmosphereGain)
       atmosphereGain.connect(mainGain)
 
       // Start oscillators
       rumbleOsc.start()
       atmosphereOsc.start()
+      await audioContext.resume()
 
-      // Handle tab visibility
+      // Handle tab visibility after audio is initialized
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           audioContext.suspend()
-        } else {
+        } else if (audioInitialized) {
           audioContext.resume()
         }
       })
 
-      // Initial start of audio context
-      if (document.visibilityState === 'visible') {
-        audioContext.resume()
-      }
-
+      setAudioInitialized(true)
     } catch (error) {
       console.error('Audio initialization error:', error)
     }
   }
 
+  // Handle click anywhere to start audio
   useEffect(() => {
-    initializeAudio()
+    const handleClick = async () => {
+      await initializeAudio()
+      // Remove click listener after initialization
+      document.removeEventListener('click', handleClick)
+    }
+
+    document.addEventListener('click', handleClick)
+
     return () => {
+      document.removeEventListener('click', handleClick)
       if (audioContextRef.current) {
         audioContextRef.current.close()
       }
