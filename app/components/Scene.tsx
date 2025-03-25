@@ -102,6 +102,8 @@ export function Scene() {
             />
             <ChromaticAberration
               offset={chromaticAberrationOffset}
+              radialModulation={false}
+              modulationOffset={1.0}
             />
           </EffectComposer>
           
