@@ -56,7 +56,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       rumbleOsc.frequency.value = 20
 
       const rumbleGain = audioContext.createGain()
-      rumbleGain.gain.value = 0.8
+      rumbleGain.gain.value = 0.3
       rumbleOsc.connect(rumbleGain)
       rumbleGain.connect(mainGain)
 
@@ -66,7 +66,7 @@ export function BlackHole({ size = 3 }: BlackHoleProps) {
       atmosphereOsc.frequency.value = 40
       
       const atmosphereGain = audioContext.createGain()
-      atmosphereGain.gain.value = 0.4
+      atmosphereGain.gain.value = 0.2
       atmosphereOsc.connect(atmosphereGain)
       atmosphereGain.connect(mainGain)
 
